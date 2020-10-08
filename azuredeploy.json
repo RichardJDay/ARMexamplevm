@@ -1,0 +1,423 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environmentName": {
+      "type": "string"
+    },
+    "resourceVersion": {
+      "type": "string"
+    },
+    "publicIPAddress": {
+      "type": "string"
+    },
+    "networkSecurityGroup": {
+      "type": "string"
+    },
+    "subnet": {
+      "type": "string"
+    },
+    "privateIPAddress": {
+      "type": "string"
+    },
+    "virtualNetwork": {
+      "defaultValue": "DEV-Simply-Automation-2007",
+      "type": "String"
+    },
+    "PrincipleID": {
+      "type": "string"
+    }
+
+
+  },
+  "functions": [],
+  "variables": {
+    "resourceNameSeparator": "-",
+    "longResourceName": "[concat(parameters('environmentName'), variables('resourceNameSeparator'), 'Simply', variables('resourceNameSeparator'), 'Automation')]",
+    "longResourceNameWithVersion": "[concat(variables('longResourceName'), variables('resourceNameSeparator'), parameters('resourceVersion'))]"
+  },
+  "resources": [
+    {
+      "name": "[toLower(concat(parameters('environmentName'),'simplyautomation2009'))]",
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2019-06-01",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "displayName": "[toLower(concat(parameters('environmentName'),'simplyautomation2009'))]"
+      },
+      "sku": {
+        "name": "Standard_LRS"
+      },
+      "kind": "Storage"
+    },
+
+    {
+      "name": "[concat(variables('longResourceName'),variables('resourceNameSeparator'),'nsg',variables('resourceNameSeparator'),parameters('resourceVersion'))]",
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "id": "[resourceId('Microsoft.Network/networkSecurityGroups/', parameters('networkSecurityGroup'))]",
+      "apiVersion": "2018-08-01",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "securityRules": [
+          {
+            "name": "SecurityCenter-JITRule-213214091-FEE6F841586D4E7398F06C8E9EEB1C57",
+            "properties": {
+              "description": "ASC JIT Network Access rule created by an initiation request for policy 'default' of VM 'dev-Metrix-Automation-2009'.",
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "3389",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "[parameters('privateIPAddress')]",
+              "access": "Allow",
+              "priority": 100,
+              "direction": "Inbound",
+              "sourcePortRanges": [],
+              "destinationPortRanges": [],
+              "sourceAddressPrefixes": [],
+              "destinationAddressPrefixes": []
+            }
+          },
+          {
+            "name": "RDP",
+            "properties": {
+              "protocol": "TCP",
+              "sourcePortRange": "*",
+              "destinationPortRange": "3389",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 1002,
+              "direction": "Inbound",
+              "sourcePortRanges": [],
+              "destinationPortRanges": [],
+              "sourceAddressPrefixes": [],
+              "destinationAddressPrefixes": []
+            }
+          },
+          {
+            "name": "SecurityCenter-JITRule_213214091_D497F6C08B8143159A39BCC9BB8FA2AC",
+            "properties": {
+              "description": "ASC JIT Network Access rule for policy 'default' of VM 'dev-Metrix-Automation-2009'.",
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "3389",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "[parameters('privateIPAddress')]",
+              "access": "Deny",
+              "priority": 1001,
+              "direction": "Inbound",
+              "sourcePortRanges": [],
+              "destinationPortRanges": [],
+              "sourceAddressPrefixes": [],
+              "destinationAddressPrefixes": []
+            }
+          },
+          {
+            "name": "Port_8080",
+            "properties": {
+              "description": "Ports for On Prem Gateway ",
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 1000,
+              "direction": "Outbound",
+              "sourcePortRanges": [],
+              "destinationPortRanges": [
+                "443",
+                "5671",
+                "5372",
+                "9350",
+                "9351",
+                "9352",
+                "9353",
+                "9354"
+              ],
+              "sourceAddressPrefixes": [],
+              "destinationAddressPrefixes": []
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "[concat(variables('longResourceName'),variables('resourceNameSeparator'),'ip',variables('resourceNameSeparator'), parameters('resourceVersion'))]",
+      "type": "Microsoft.Network/publicIPAddresses",
+      "apiVersion": "2019-11-01",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "displayName": "PublicIPAddress"
+      },
+      "properties": {
+        "publicIPAllocationMethod": "Static",
+        "dnsSettings": {
+          "domainNameLabel": "[toLower(concat(parameters('environmentName'),'simplyautomation'))]"
+        }
+
+
+      }
+    },
+
+
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "apiVersion": "2020-05-01",
+      "name": "[variables('longResourceNameWithVersion')]",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkSecurityGroups/', parameters('networkSecurityGroup'))]",
+        "[resourceId('Microsoft.Network/publicIPAddresses/', parameters('publicIPAddress'))]"
+      ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAddress": "[parameters('privateIPAddress')]",
+              "privateIPAllocationMethod": "Static",
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses/', parameters('publicIPAddress'))]"
+              },
+              "subnet": {
+                "id": "[parameters('subnet')]"
+              },
+              "primary": true,
+              "privateIPAddressVersion": "IPv4"
+            }
+          }
+        ],
+        "dnsSettings": {
+          "dnsServers": []
+        },
+        "enableAcceleratedNetworking": false,
+        "enableIPForwarding": false,
+        "networkSecurityGroup": {
+          "id": "[resourceId('Microsoft.Network/networkSecurityGroups/',parameters('networkSecurityGroup'))]"
+        }
+      }
+    },
+
+    {
+      "name": "[concat(variables('longResourceName'),variables('resourceNameSeparator'),'vm',variables('resourceNameSeparator'),parameters('resourceVersion'))]",
+      "type": "Microsoft.Compute/virtualMachines",
+      "apiVersion": "2019-07-01",
+      "location": "[resourceGroup().location]",
+      
+      
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts/',concat(parameters('environmentName'), 'simplyautomation2009'))]",
+        "[resourceId('Microsoft.Network/networkInterfaces/',variables('longResourceNameWithVersion'))]"
+      ],
+
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "Standard_DS2_v2"
+        },
+        "osProfile": {
+          "computerName": "polygonauto",
+        "adminUsername": "Polygon",
+        "adminPassword": "thepasswordgoeshere"
+        },
+
+
+
+        "storageProfile": {
+          "osDisk": {
+            "createOption": "FromImage"
+
+
+
+
+          },
+          "imageReference": {
+                        "publisher": "MicrosoftWindowsDesktop",
+                        "offer": "Windows-10",
+                        "sku": "20h1-pro",
+                        "version": "latest"
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces/', variables('longResourceNameWithVersion'))]"
+            }
+          ]
+        },
+
+        "diagnosticsProfile": {
+          "bootDiagnostics": {
+            "enabled": true,
+            "storageUri": "[reference(resourceId('Microsoft.Storage/storageAccounts/', concat(parameters('environmentName'), 'simplyautomation2009'))).primaryEndpoints.blob]"
+          }
+        }
+
+      }
+    },
+
+    {
+      "type": "Microsoft.Network/networkSecurityGroups/securityRules",
+      "apiVersion": "2020-05-01",
+      "name": "[concat(parameters('networkSecurityGroup'), '/Port_8080')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroup'))]"
+      ],
+      "properties": {
+        "description": "Ports for On Prem Gateway ",
+        "protocol": "*",
+        "sourcePortRange": "*",
+        "sourceAddressPrefix": "*",
+        "destinationAddressPrefix": "*",
+        "access": "Allow",
+        "priority": 1000,
+        "direction": "Outbound",
+        "sourcePortRanges": [],
+        "destinationPortRanges": [
+          "443",
+          "5671",
+          "5372",
+          "9350",
+          "9351",
+          "9352",
+          "9353",
+          "9354"
+        ],
+        "sourceAddressPrefixes": [],
+        "destinationAddressPrefixes": []
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkSecurityGroups/securityRules",
+      "apiVersion": "2020-05-01",
+      "name": "[concat(parameters('networkSecurityGroup'), '/RDP')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroup'))]"
+      ],
+      "properties": {
+        "protocol": "TCP",
+        "sourcePortRange": "*",
+        "destinationPortRange": "3389",
+        "sourceAddressPrefix": "*",
+        "destinationAddressPrefix": "*",
+        "access": "Allow",
+        "priority": 1002,
+        "direction": "Inbound",
+        "sourcePortRanges": [],
+        "destinationPortRanges": [],
+        "sourceAddressPrefixes": [],
+        "destinationAddressPrefixes": []
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkSecurityGroups/securityRules",
+      "apiVersion": "2020-05-01",
+      "name": "[concat(parameters('networkSecurityGroup'), '/SecurityCenter-JITRule_213214091_D497F6C08B8143159A39BCC9BB8FA2AC')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroup'))]"
+      ],
+      "properties": {
+        "description": "ASC JIT Network Access rule for policy 'default' of VM 'dev-Metrix-Automation-2009'.",
+        "protocol": "*",
+        "sourcePortRange": "*",
+        "destinationPortRange": "3389",
+        "sourceAddressPrefix": "*",
+        "destinationAddressPrefix": "[parameters('privateIPAddress')]",
+        "access": "Deny",
+        "priority": 1001,
+        "direction": "Inbound",
+        "sourcePortRanges": [],
+        "destinationPortRanges": [],
+        "sourceAddressPrefixes": [],
+        "destinationAddressPrefixes": []
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkSecurityGroups/securityRules",
+      "apiVersion": "2020-05-01",
+      "name": "[concat(parameters('networkSecurityGroup'), '/SecurityCenter-JITRule-213214091-FEE6F841586D4E7398F06C8E9EEB1C57')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroup'))]"
+      ],
+      "properties": {
+        "description": "ASC JIT Network Access rule created by an initiation request for policy 'default' of VM 'dev-Metrix-Automation-2009'.",
+        "protocol": "*",
+        "sourcePortRange": "*",
+        "destinationPortRange": "3389",
+        "sourceAddressPrefix": "*",
+        "destinationAddressPrefix": "[parameters('privateIPAddress')]",
+        "access": "Allow",
+        "priority": 100,
+        "direction": "Inbound",
+        "sourcePortRanges": [],
+        "destinationPortRanges": [],
+        "sourceAddressPrefixes": [],
+        "destinationAddressPrefixes": []
+      }
+    }
+    //,
+    // {
+    //   "type": "Microsoft.Network/virtualNetworks",
+    //   "apiVersion": "2020-05-01",
+    //   "name": "[parameters('virtualNetwork')]",
+    //   "location": "uksouth",
+    //   "properties": {
+    //     "addressSpace": {
+    //       "addressPrefixes": [
+    //         "10.42.0.0/16"
+    //       ]
+    //     },
+    //     "subnets": [
+    //       {
+    //         "name": "[parameters('virtualNetwork')]",
+    //         "properties": {
+    //           "addressPrefix": "10.42.1.0/24",
+
+    //           "delegations": [],
+    //           "privateEndpointNetworkPolicies": "Enabled",
+    //           "privateLinkServiceNetworkPolicies": "Enabled"
+    //         }
+    //       },
+    //       {
+    //         "name": "GatewaySubnet",
+    //         "properties": {
+    //           "addressPrefix": "10.42.2.0/24",
+    //           "delegations": [],
+    //           "privateEndpointNetworkPolicies": "Enabled",
+    //           "privateLinkServiceNetworkPolicies": "Enabled"
+    //         }
+    //       }
+    //     ],
+    //     "virtualNetworkPeerings": [],
+    //     "enableDdosProtection": false,
+    //     "enableVmProtection": false
+    //   }
+    // },
+    // {
+    //   "type": "Microsoft.Network/virtualNetworks/subnets",
+    //   "apiVersion": "2020-05-01",
+    //   "name": "[concat(parameters('virtualNetwork'), '/', parameters('virtualNetwork'))]",
+    //   "dependsOn": [
+    //     "[resourceId('Microsoft.Network/virtualNetworks', parameters('virtualNetwork'))]"
+    //   ],
+    //   "properties": {
+    //     "addressPrefix": "10.43.1.0/24"
+    //   }
+    // },
+
+    // {
+    //   "type": "Microsoft.Network/virtualNetworks/subnets",
+    //   "apiVersion": "2020-05-01",
+    //   "name": "[concat(parameters('virtualNetwork'), '/GatewaySubnet')]",
+    //   "dependsOn": [
+    //     "[resourceId('Microsoft.Network/virtualNetworks', parameters('virtualNetwork'))]"
+    //   ],
+    //   "properties": {
+    //     "addressPrefix": "10.42.2.0/24",
+    //     "delegations": [],
+    //     "privateEndpointNetworkPolicies": "Enabled",
+    //     "privateLinkServiceNetworkPolicies": "Enabled"
+    //   }
+    // }
+  ],
+  "outputs": {}
+}
